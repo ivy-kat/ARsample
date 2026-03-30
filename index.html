@@ -1,124 +1,19 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script src="https://aframe.io/releases/1.0.0/aframe.min.js"></script>
-        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-        <style>
-            body {
-                margin: 0;
-                overflow: hidden;
-                font-family: "Segoe UI", sans-serif;
-            }
-
-            #capture-button {
-                position: fixed;
-                left: 50%;
-                bottom: 24px;
-                z-index: 20;
-                transform: translateX(-50%);
-                border: 0;
-                border-radius: 999px;
-                padding: 14px 24px;
-                background: rgba(255, 255, 255, 0.92);
-                color: #111;
-                font-size: 16px;
-                font-weight: 700;
-                letter-spacing: 0.04em;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-                cursor: pointer;
-            }
-
-            #capture-button:active {
-                transform: translateX(-50%) scale(0.98);
-            }
-        </style>
-    </head>
-    <body>
-        <button id="capture-button" type="button">撮影</button>
-
-        <a-scene
-            embedded
-            renderer="antialias: true; alpha: true; precision: high;"
-            arjs="
-                sourceType: webcam;
-                facingMode: environment;
-                sourceWidth: 1280;
-                sourceHeight: 720;
-                displayWidth: 1280;
-                displayHeight: 720;
-                debugUIEnabled: false;
-            "
-        >
-            <a-marker preset="hiro">
-                <a-entity
-                    position="0 -1 0"
-                    scale="0.05 0.05 0.05"
-                    gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/scene.gltf"
-                ></a-entity>
-            </a-marker>
-            <a-entity camera></a-entity>
-        </a-scene>
-
-        <script>
-            const captureButton = document.getElementById("capture-button");
-            const scene = document.querySelector("a-scene");
-
-            function syncRendererSize() {
-                if (!scene || !scene.renderer) {
-                    return;
-                }
-
-                const ratio = Math.min(window.devicePixelRatio || 1, 2);
-                scene.renderer.setPixelRatio(ratio);
-                scene.renderer.setSize(window.innerWidth, window.innerHeight, false);
-            }
-
-            scene.addEventListener("render-target-loaded", syncRendererSize);
-            window.addEventListener("resize", syncRendererSize);
-
-            function getVideoElement() {
-                return document.querySelector("video");
-            }
-
-            function getRenderCanvas() {
-                return scene && scene.canvas ? scene.canvas : document.querySelector("canvas.a-canvas");
-            }
-
-            function downloadImage(dataUrl) {
-                const link = document.createElement("a");
-                link.href = dataUrl;
-                link.download = `ar-capture-${Date.now()}.png`;
-                link.click();
-            }
-
-            captureButton.addEventListener("click", () => {
-                const video = getVideoElement();
-                const renderCanvas = getRenderCanvas();
-
-                if (!video || !renderCanvas) {
-                    window.alert("カメラ映像の準備ができていません。少し待ってから再度撮影してください。");
-                    return;
-                }
-
-                const width = video.videoWidth || renderCanvas.width || window.innerWidth;
-                const height = video.videoHeight || renderCanvas.height || window.innerHeight;
-                const outputCanvas = document.createElement("canvas");
-                const context = outputCanvas.getContext("2d");
-
-                outputCanvas.width = width;
-                outputCanvas.height = height;
-
-                if (!context) {
-                    window.alert("画像の生成に失敗しました。");
-                    return;
-                }
-
-                context.drawImage(video, 0, 0, width, height);
-                context.drawImage(renderCanvas, 0, 0, width, height);
-                downloadImage(outputCanvas.toDataURL("image/png"));
-            });
-        </script>
-    </body>
+   <script src="https://aframe.io/releases/1.0.0/aframe.min.js"></script>
+   <!-- we import arjs version without NFT but with marker + location based support -->
+   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+   <body style="margin : 0px; overflow: hidden;">
+       <a-scene embedded arjs>
+       <a-marker preset="hiro">
+           <!-- we use cors proxy to avoid cross-origin problems ATTENTION! you need to set up your server -->
+           <a-entity
+           position="0 -1 0"
+           scale="0.05 0.05 0.05"
+           gltf-model="your-server/https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/scene.gltf"
+           ></a-entity>
+       </a-marker>
+       <a-entity camera></a-entity>
+       </a-scene>
+   </body>
 </html>
