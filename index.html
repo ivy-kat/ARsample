@@ -1,19 +1,147 @@
 <!DOCTYPE html>
 <html>
-   <script src="https://aframe.io/releases/1.0.0/aframe.min.js"></script>
-   <!-- we import arjs version without NFT but with marker + location based support -->
-   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-   <body style="margin : 0px; overflow: hidden;">
-       <a-scene embedded arjs>
-       <a-marker preset="hiro">
-           <!-- we use cors proxy to avoid cross-origin problems ATTENTION! you need to set up your server -->
-           <a-entity
-           position="0 -1 0"
-           scale="0.05 0.05 0.05"
-           gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/scene.gltf"
-           ></a-entity>
-       </a-marker>
-       <a-entity camera></a-entity>
-       </a-scene>
-   </body>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script src="https://aframe.io/releases/1.0.0/aframe.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+        <style>
+            body {
+                margin: 0;
+                overflow: hidden;
+                font-family: "Segoe UI", sans-serif;
+            }
+
+            #capture-btn {
+                position: fixed;
+                left: 50%;
+                bottom: 24px;
+                transform: translateX(-50%);
+                z-index: 30;
+                border: 0;
+                border-radius: 999px;
+                padding: 12px 24px;
+                background: rgba(255, 255, 255, 0.94);
+                color: #111;
+                font-size: 16px;
+                font-weight: 700;
+                letter-spacing: 0.05em;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+                cursor: pointer;
+            }
+
+            #capture-btn:disabled {
+                opacity: 0.65;
+                cursor: default;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="capture-btn" type="button">撮影して保存</button>
+
+        <a-scene embedded arjs>
+            <a-marker preset="hiro">
+                <a-entity
+                    position="0 -1 0"
+                    scale="0.05 0.05 0.05"
+                    gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/nft/trex/scene.gltf"
+                ></a-entity>
+            </a-marker>
+            <a-entity camera></a-entity>
+        </a-scene>
+
+        <script>
+            const captureBtn = document.getElementById("capture-btn");
+            const sceneEl = document.querySelector("a-scene");
+
+            function getVideoEl() {
+                return document.querySelector("video");
+            }
+
+            function getArCanvasEl() {
+                return (sceneEl && sceneEl.canvas) || document.querySelector("canvas.a-canvas");
+            }
+
+            function composeCaptureCanvas(videoEl, arCanvasEl) {
+                const w = videoEl.videoWidth || arCanvasEl.width || window.innerWidth;
+                const h = videoEl.videoHeight || arCanvasEl.height || window.innerHeight;
+                const out = document.createElement("canvas");
+                out.width = w;
+                out.height = h;
+
+                const ctx = out.getContext("2d");
+                if (!ctx) {
+                    return null;
+                }
+
+                ctx.drawImage(videoEl, 0, 0, w, h);
+                ctx.drawImage(arCanvasEl, 0, 0, w, h);
+                return out;
+            }
+
+            async function saveImage(canvas) {
+                const fileName = `ar-capture-${Date.now()}.png`;
+                const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+
+                if (!blob) {
+                    throw new Error("画像生成に失敗しました");
+                }
+
+                const file = new File([blob], fileName, { type: "image/png" });
+
+                // Supported phones can open the share sheet so users choose Photos/Files folders.
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: "AR Capture" });
+                    return "shared";
+                }
+
+                // Fallback: browser download location (usually Downloads).
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+                return "downloaded";
+            }
+
+            captureBtn.addEventListener("click", async () => {
+                const videoEl = getVideoEl();
+                const arCanvasEl = getArCanvasEl();
+
+                if (!videoEl || !arCanvasEl) {
+                    window.alert("カメラの準備中です。少し待ってから再度お試しください。");
+                    return;
+                }
+
+                const composed = composeCaptureCanvas(videoEl, arCanvasEl);
+                if (!composed) {
+                    window.alert("画像を作成できませんでした。");
+                    return;
+                }
+
+                captureBtn.disabled = true;
+                const original = captureBtn.textContent;
+                captureBtn.textContent = "保存中...";
+
+                try {
+                    const mode = await saveImage(composed);
+                    if (mode === "downloaded") {
+                        window.alert("画像をダウンロードしました。保存先はブラウザ設定に依存します。");
+                    }
+                } catch (err) {
+                    if (err && err.name === "AbortError") {
+                        // Share dialog was canceled by user.
+                    } else {
+                        window.alert("保存に失敗しました。");
+                    }
+                } finally {
+                    captureBtn.disabled = false;
+                    captureBtn.textContent = original;
+                }
+            });
+        </script>
+    </body>
 </html>
