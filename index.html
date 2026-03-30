@@ -38,7 +38,19 @@
     <body>
         <button id="capture-button" type="button">撮影</button>
 
-        <a-scene embedded arjs>
+        <a-scene
+            embedded
+            renderer="antialias: true; alpha: true; precision: high;"
+            arjs="
+                sourceType: webcam;
+                facingMode: environment;
+                sourceWidth: 1280;
+                sourceHeight: 720;
+                displayWidth: 1280;
+                displayHeight: 720;
+                debugUIEnabled: false;
+            "
+        >
             <a-marker preset="hiro">
                 <a-entity
                     position="0 -1 0"
@@ -52,6 +64,19 @@
         <script>
             const captureButton = document.getElementById("capture-button");
             const scene = document.querySelector("a-scene");
+
+            function syncRendererSize() {
+                if (!scene || !scene.renderer) {
+                    return;
+                }
+
+                const ratio = Math.min(window.devicePixelRatio || 1, 2);
+                scene.renderer.setPixelRatio(ratio);
+                scene.renderer.setSize(window.innerWidth, window.innerHeight, false);
+            }
+
+            scene.addEventListener("render-target-loaded", syncRendererSize);
+            window.addEventListener("resize", syncRendererSize);
 
             function getVideoElement() {
                 return document.querySelector("video");
